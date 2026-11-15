@@ -2647,19 +2647,12 @@ const FAM=[
  {t:2,v:fam([[0,0],[0,1],[0,2],[0,3],[0,4]])},
  {t:2,v:fam([[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]])},
  {t:2,v:fam([[0,0],[1,0],[2,0],[2,1],[2,2]])},
- {t:2,v:fam([[0,0],[0,2],[1,0],[1,1],[1,2]])},
- {t:2,v:fam([[0,1],[1,0],[1,1],[1,2],[2,1]])},
- {t:2,v:fam([[0,0],[0,1],[1,0],[1,1],[2,0]],1)}];
-// kesulitan naik mengikuti skor: 0 (skor 0) sampai 1 (skor 3500 ke atas)
+ {t:2,v:fam([[0,0],[0,1],[0,2],[0,3],[0,4],[0,5]])}];
+// level kesulitan naik mengikuti skor; HANYA memengaruhi pengali poin (tidak mengubah blok yang diberikan)
 const LV=[[.1,"Easy"],[.25,"Normal"],[.5,"Medium"],[.75,"Hard"],[2,"Impossible"]];
 const lvName=d=>LV.find(x=>d<x[0])[1];
 let B={ph:"setup",gen:false};
 const diff=()=>Math.min(1,(B.sc||0)/200000);
-function pickFam(d){
- const W=[2.4*(1-d)+.25,1.4,.08+2.8*d*d],cnt=[0,0,0];FAM.forEach(f=>cnt[f.t]++);
- const ws=FAM.map(f=>W[f.t]/cnt[f.t]*(f.dot?.15+.6*(1-d):1)*(f.v.every(q=>q.length===shape(q)[0]*shape(q)[1])?1.4:1));
- let x=Math.random()*ws.reduce((a,b)=>a+b,0);
- for(let i=0;i<ws.length;i++){x-=ws[i];if(x<=0)return FAM[i]}return FAM[0]}
 // papan
 const fits=(g,p,r,c)=>{for(const [a,b] of p){const y=r+a,x=c+b;if(y<0||x<0||y>=N||x>=N||g[y*N+x])return false}return true};
 const anyFit=(g,p)=>{for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(fits(g,p,r,c))return true;return false};
@@ -2678,20 +2671,118 @@ function solvable(g,ps){let budget=400;
   return false};
  return go(g,ps)}
 const rc=()=>Math.floor(Math.random()*CC),rv=f=>f.v[Math.floor(Math.random()*f.v.length)];
-function clearPot(g,p,rw,cl){const pr=[],pc=[];p.forEach(([a,b])=>{pr[a]=(pr[a]||0)+1;pc[b]=(pc[b]||0)+1});let m=0;
- for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(fits(g,p,r,c)){let k=0;pr.forEach((n,a)=>{if(rw[r+a]+n===N)k++});pc.forEach((n,b)=>{if(cl[c+b]+n===N)k++});if(k>m)m=k}return m}
-// ala video: papan makin penuh -> makin sering diberi blok yang bisa menutup baris; warna sering sama; persegi panjang lebih sering; selalu bisa diselesaikan
-function mkTray(g,d){
- const f=g.reduce((a,v)=>a+(v?1:0),0)/NN,as=Math.max(0,Math.min(.85,(f-.28)*1.8))*(1-.3*d),c0=rc(),same=Math.random()<.5,cs=[],rw=new Array(N).fill(0),cl=new Array(N).fill(0);
- for(let i=0;i<NN;i++)if(g[i]){rw[(i/N)|0]++;cl[i%N]++}
- for(let t=0;t<12;t++){
-  const ps=[0,1,2].map(()=>({s:rv(pickFam(d)),c:same?c0:rc(),u:false}));
-  if(key(ps[0].s)===key(ps[1].s)&&key(ps[1].s)===key(ps[2].s))continue;
-  if(!ps.some(p=>anyFit(g,p.s)))continue;
-  cs.push({ps,v:(Math.random()<as?ps.reduce((a,p)=>a+clearPot(g,p.s,rw,cl),0):0)+Math.random()})}
- cs.sort((x,y)=>y.v-x.v);
- for(const x of cs.slice(0,3))if(solvable(g,x.ps))return x.ps;
- const ez=FAM.filter(f=>f.t===0),ps=[0,1,2].map(()=>({s:rv(ez[Math.floor(Math.random()*ez.length)]),c:rc(),u:false}));
+// ---- generator blok adaptif: tiap blok dipilih supaya pasti bisa menutup baris/kolom di papan saat ini ----
+const SHAPES=[];{const seen=new Set();FAM.forEach((f,fi)=>f.v.forEach(s=>{const k=key(s);if(!seen.has(k)){seen.add(k);SHAPES.push({s,f,fi,n:f.v.length})}}))}
+const HIST=[]; // keluarga bentuk yang baru dipakai (agar blok bervariasi)
+const FCNT=[0,0,0];FAM.forEach(f=>FCNT[f.t]++);
+const BASEW=[1.6,1.4,.6];
+const isRect=q=>q.length===shape(q)[0]*shape(q)[1];
+// tiap keluarga bentuk berpeluang sama (varian rotasi berbagi bobot); yang baru saja keluar dikurangi supaya tidak itu-itu saja
+const FW={5:.5,10:.08,11:.6,2:.7,13:.15}; // garis lurus panjang & kotak besar cenderung mudah menutup garis, jadi dikurangi agar tidak mendominasi
+const baseW=o=>(o.f.dot?.25:1)*(FW[o.fi]||1)*Math.pow(.3,HIST.filter(x=>x===o.fi).length);
+const rowCol=g=>{const rw=new Array(N).fill(0),cl=new Array(N).fill(0);for(let i=0;i<NN;i++)if(g[i]){rw[(i/N)|0]++;cl[i%N]++}return{rw,cl}};
+// penempatan terbaik untuk bentuk p: n = jumlah garis yang langsung tertutup, h = seberapa penuh baris/kolom yang disentuh; n=-1 jika tidak muat
+function bestPlace(g,p,rw,cl){const pr=[],pc=[];p.forEach(([a,b])=>{pr[a]=(pr[a]||0)+1;pc[b]=(pc[b]||0)+1});
+ let bn=-1,bh=-1,br=0,bc=0;
+ for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(fits(g,p,r,c)){let n=0,h=0;
+  pr.forEach((k,a)=>{const t=rw[r+a]+k;if(t===N)n++;else h+=Math.pow(t/N,3)});
+  pc.forEach((k,b)=>{const t=cl[c+b]+k;if(t===N)n++;else h+=Math.pow(t/N,3)});
+  if(n>bn||(n===bn&&h>bh)){bn=n;bh=h;br=r;bc=c}}
+ return{n:bn,h:bh,r:br,c:bc}}
+const wpick=(ws)=>{const t=ws.reduce((a,b)=>a+b,0);if(t<=0)return -1;let x=Math.random()*t;for(let i=0;i<ws.length;i++){x-=ws[i];if(x<=0)return i}return ws.length-1};
+// bangun 3 blok berurutan: tiap blok dipilih dari bentuk yang menutup garis pada papan saat itu (lalu ditaruh & disapu untuk blok berikutnya)
+// untuk bentuk yang belum bisa clear: cari penempatan (3 teratas) setelah mana masih ada bentuk lain yang bisa clear; k = jumlah bentuk pembersih
+const ENM=new Map(); // cache hasil enable per papan (diisi ulang tiap tray)
+function enable(g,info){
+ const kk=g.join("");if(ENM.has(kk))return ENM.get(kk);
+ const res=SHAPES.map((o,i)=>{const e={k:0,r:info[i].r,c:info[i].c};if(info[i].n!==0)return e;
+  const {rw,cl}=rowCol(g),p=o.s,pr=[],pc=[],ops=[];
+  p.forEach(([a,b])=>{pr[a]=(pr[a]||0)+1;pc[b]=(pc[b]||0)+1});
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(fits(g,p,r,c)){let h=0,n=0;
+   pr.forEach((q,a)=>{const t=rw[r+a]+q;if(t===N)n++;else h+=Math.pow(t/N,3)});
+   pc.forEach((q,b)=>{const t=cl[c+b]+q;if(t===N)n++;else h+=Math.pow(t/N,3)});
+   if(!n)ops.push([h,r,c])}
+  ops.sort((x,y)=>y[0]-x[0]);
+  for(const [,r,c] of ops.slice(0,1)){const h=g.slice();put(h,p,r,c,1);const {rw:r2,cl:c2}=rowCol(h);let k=0;
+   for(let j=0;j<SHAPES.length;j++)if(bestPlace(h,SHAPES[j].s,r2,c2).n>0)k++;
+   if(k>e.k){e.k=k;e.r=r;e.c=c}}
+  return e});
+ ENM.set(kk,res);return res}
+function chain(g0,same,c0,info0,e0,pw,cnt){
+ const g=g0.slice(),ps=[],used=[];let seq=0,lines=0,minF=2;
+ for(let k=0;k<cnt;k++){
+  const {rw,cl}=rowCol(g),info=k===0&&info0?info0:SHAPES.map(o=>bestPlace(g,o.s,rw,cl));
+  const used2=f=>Math.pow(.25,used.filter(x=>x===f).length);
+  // pilih keluarga bentuk dulu (peluang sama), lalu varian yang memenuhi syarat di dalamnya
+  const choose=m=>{const cnt={};SHAPES.forEach((o,j)=>{if(m(j)>0)cnt[o.fi]=(cnt[o.fi]||0)+1});
+   return wpick(SHAPES.map((o,j)=>m(j)>0?baseW(o)*used2(o.fi)*m(j)/cnt[o.fi]:0))};
+  let fl0=null;
+  if(pw===0){ // mode "pas": pilih blok yang setelah clear menyisakan papan paling kosong
+   fl0=SHAPES.map((o,j)=>{if(info[j].n<=0)return 9;const h=g.slice();put(h,o.s,info[j].r,info[j].c,1);sweep(h);return h.reduce((q,v)=>q+(v?1:0),0)});
+   const mn=Math.min(...fl0);fl0=fl0.map(v=>v===mn?1:.03)}
+  let clearing=true,i=choose(j=>info[j].n>0?(pw===0?fl0[j]:Math.pow(info[j].n,pw)):0); // pw besar = utamakan blok yang menutup banyak garis sekaligus
+  let e=null;
+  if(i<0){clearing=false;e=k===0&&e0?e0:(k<cnt-1?enable(g,info):null);
+   i=choose(j=>info[j].n===0?(1+4*info[j].h)*(e?1+10*Math.min(e[j].k,3):1):0)}
+  if(i<0)return null;
+  const o=SHAPES[i],b=clearing?info[i]:(e&&e[i].k>0?e[i]:info[i]);if(clearing){seq++;lines+=b.n}used.push(o.fi);
+  put(g,o.s,b.r,b.c,1);sweep(g);
+  if(clearing){const fl=g.reduce((q,v)=>q+(v?1:0),0)/NN;if(fl<minF)minF=fl}
+  ps.push({s:o.s,c:same?c0:rc(),u:false})}
+ return{ps,seq,lines,g,used,minF:minF>1?1:minF}}
+// nilai terbaik dari satu set blok: semua urutan & penempatan (3 teratas per blok); lines = garis yang bisa dihancurkan, near = seberapa penuh baris/kolom di akhir
+function plan(g,ps){
+ let best=-1,bl=0,bn=0,be=false,nodes=0;
+ const go=(g,left,lines)=>{
+  if(nodes++>260)return;
+  const {rw,cl}=rowCol(g);
+  if(!left.length){let near=0;for(const v of rw)near+=Math.pow(v/N,3);for(const v of cl)near+=Math.pow(v/N,3);
+   const emp=!g.some(v=>v),val=lines*100+near*5+(emp?300:0);if(val>best){best=val;bl=lines;bn=near;be=emp}return}
+  for(let i=0;i<left.length;i++){const p=left[i].s,rest=left.filter((_,j)=>j!==i),pr=[],pc=[],o=[];
+   p.forEach(([a,b])=>{pr[a]=(pr[a]||0)+1;pc[b]=(pc[b]||0)+1});
+   for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(fits(g,p,r,c)){let n=0,h=0;
+    pr.forEach((k,a)=>{const t=rw[r+a]+k;if(t===N)n++;else h+=Math.pow(t/N,3)});
+    pc.forEach((k,b)=>{const t=cl[c+b]+k;if(t===N)n++;else h+=Math.pow(t/N,3)});
+    o.push([n*10+h,r,c])}
+   o.sort((x,y)=>y[0]-x[0]);
+   for(const [,r,c] of o.slice(0,3)){const h=g.slice();put(h,p,r,c,1);const n=sweep(h);go(h,rest,lines+n)}}};
+ go(g,ps,0);
+ if(best<0)return solvable(g,ps)?{lines:0,near:0,empty:false}:null;
+ return{lines:bl,near:bn,empty:be}}
+// seberapa "pas" bentuk p mengisi celah di papan: rasio sisi blok yang menempel ke kotak terisi/dinding (1 = mengisi lubang persis tanpa sisa celah)
+function snug(g,p){const set=new Set(p.map(([a,b])=>a*16+b));let best=0;
+ const sides=[];p.forEach(([a,b])=>{[[a-1,b],[a+1,b],[a,b-1],[a,b+1]].forEach(([y,x])=>{if(!set.has(y*16+x))sides.push([a,b,y,x])})});
+ for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(fits(g,p,r,c)){let k=0;
+  for(const [,,y,x] of sides){const Y=r+y,X=c+x;if(Y<0||X<0||Y>=N||X>=N||g[Y*N+X])k++}
+  const q=k/sides.length;if(q>best)best=q;if(best===1)break}
+ return best}
+function mkTray(g,cnt=3){
+ ENM.clear();
+ const c0=rc(),same=Math.random()<.5,{rw,cl}=rowCol(g);
+ // blok yang pada papan sekarang langsung bisa menutup garis
+ const info0=SHAPES.map(o=>bestPlace(g,o.s,rw,cl)),clearNow=info0.map(x=>x.n>0),e0=clearNow.some(Boolean)?null:enable(g,info0);
+ const cands=[];
+ for(let t=0;t<9;t++){const r=chain(g,same,c0,info0,e0,t%3===0?0:t%3===1?2:.3,cnt);if(r)cands.push(r)}
+ // kandidat tambahan: 3 blok yang bentuknya paling cocok mengisi baris/kolom yang hampir penuh (bisa dikombinasikan, tidak harus clear sendiri-sendiri)
+ const sn=SHAPES.map((o,i)=>info0[i].n<0?0:snug(g,o.s));
+ const ws=SHAPES.map((o,i)=>info0[i].n<0?0:baseW(o)/(sn[i]===1?Math.pow(.3,HIST.filter(x=>x===o.fi).length):1)*(1+6*(info0[i].h+4*Math.max(0,info0[i].n))+80*Math.pow(sn[i],6))); // bentuk yang pas mengisi lubang tidak kena penalti "baru saja keluar"
+ if(ws.some(x=>x>0))for(let t=0;t<14;t++){
+  const idx=Array.from({length:cnt},()=>wpick(ws));if(idx.some(i=>i<0))continue;
+  cands.push({ps:idx.map(i=>({s:SHAPES[i].s,c:same?c0:rc(),u:false})),used:idx.map(i=>SHAPES[i].fi)})}
+ let best=null,bv=-1e9,bu=[];
+ for(const r of cands){
+  const ps=r.ps,lng=r.used.filter(x=>x===10||x===13).length; // garis panjang (5/6 kotak): maks 1 per tray & jangan berturut-turut
+  if(lng>1)continue;
+  if(cnt===3&&key(ps[0].s)===key(ps[1].s)&&key(ps[1].s)===key(ps[2].s))continue;
+  const pv=plan(g,ps);if(!pv)continue; // harus bisa dipasang semua
+  const snugS=ps.map(p=>sn[SHAPES.findIndex(o=>key(o.s)===key(p.s))]||0),
+   fitB=snugS.reduce((q,v)=>q+(v===1?380:Math.pow(v,3)*25),0),
+   indep=ps.filter(p=>clearNow[SHAPES.findIndex(o=>key(o.s)===key(p.s))]).length,
+   div=new Set(r.used).size,pen=r.used.reduce((q,x)=>q+(FW[x]<1?(1-FW[x])*60:0),0),
+   v=pv.lines*80+pv.near*8+fitB+(pv.empty?400:0)+indep*25+div*45-pen-(lng&&HIST.some(x=>x===10||x===13)?150:0)+Math.random()*25;
+  if(v>bv){bv=v;best=ps;bu=r.used}}
+ if(best){HIST.push(...bu);while(HIST.length>6)HIST.shift();return best}
+ const ez=FAM.filter(f=>f.t===0),ps=Array.from({length:cnt},()=>({s:rv(ez[Math.floor(Math.random()*ez.length)]),c:rc(),u:false}));
  if(!ps.some(p=>anyFit(g,p.s)))ps[0].s=[[0,0]];
  return ps}
 const shape=p=>{let w=0,h=0;p.forEach(([r,c])=>{if(r+1>h)h=r+1;if(c+1>w)w=c+1});return[w,h]};
@@ -2774,7 +2865,17 @@ const commit=()=>{if(B.ph==="play"&&B.sc>S.best){S.best=B.sc;save()}};
 // alur game
 function start(){
  B={ph:"play",gen:false,g:new Array(NN).fill(0),tray:[],sc:0,shown:0,cb:0,gr:0,lines:0,mc:0,moves:0,undo:2,snap:null,lock:false,over:false,rec:false,pb:S.best,pv:null,hl:null,cl:null,pl:null,lb:"Easy",px:0};
- B.tray=mkTray(B.g,0);draw()}
+ HIST.length=0;seedBoard(B.g);B.tray=mkTray(B.g);draw()}
+// papan awal: beberapa blok acak (tanpa garis penuh), lalu tray berisi 3 blok yang pasti bisa dipasang
+function seedBoard(g){
+ const n=3+Math.floor(Math.random()*3);let placed=0,tries=0;
+ while(placed<n&&tries++<60){
+  const o=SHAPES[Math.floor(Math.random()*SHAPES.length)];if(o.f.dot)continue;
+  const [w,h]=shape(o.s),r=Math.floor(Math.random()*(N-h+1)),c=Math.floor(Math.random()*(N-w+1));
+  if(!fits(g,o.s,r,c))continue;
+  const col=rc()+1,t=g.slice();put(t,o.s,r,c,col);
+  const q=fullLines(t);if(q.R.length||q.C.length)continue;
+  put(g,o.s,r,c,col);placed++}}
 function setup(){commit();for(let i=1;i<5;i++)el.classList.remove("t"+i);if(dg){dg.d.remove();dg=null}tgt=null;cancelAnimationFrame(tw);B={ph:"setup",gen:false};window.brLauncher&&brLauncher()}
 function place(si,r,c){
  const t=B.tray[si],g=B.g;if(B.mas){B.mas.remove();B.mas=null}
@@ -2804,7 +2905,7 @@ function place(si,r,c){
  tween();paintCb();
  if(!n)after();else paintUn()}
 function after(){
- if(B.tray.every(p=>p.u)){B.tray=mkTray(B.g,diff());paintTray(true)}else paintTray();
+ if(B.tray.every(p=>p.u)){B.tray=mkTray(B.g);paintTray(true)}else paintTray()
  const nm=lvName(diff());if(nm!==B.lb){B.lb=nm;toast("Kesulitan naik: "+nm,1800)}
  paintLv();paintUn();
  if(!B.tray.some(p=>!p.u&&anyFit(B.g,p.s)))over()}

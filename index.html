@@ -784,9 +784,32 @@ html[data-rxt="1"] #gbar .chip,html[data-rxt="2"] #gbar .chip,html[data-rxt="3"]
 @keyframes rxbump{0%{transform:scale(1.18)}100%{transform:scale(1)}}
 .rxtt{position:absolute;left:50%;top:60px;z-index:5;padding:7px 14px;border-radius:99px;background:var(--ac);color:var(--acx);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;pointer-events:none;box-shadow:0 6px 16px rgba(0,0,0,.3);animation:rxtt 1.8s ease both}
 @keyframes rxtt{0%{opacity:0;transform:translate(-50%,-8px)}12%{opacity:1;transform:translate(-50%,0)}80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-4px)}}
-.rxp.fall{animation:rxfade 1.5s ease-in-out both;pointer-events:none}
-.rxp.fall::after{display:none}
+.rxp.fall,.rxp.bm.fall,.rxp.no.fall,.rxp.hint.fall{animation:rxfade 1.5s ease-in-out both;pointer-events:none}
+.rxp.fall::after,.rxp.bm.fall::after{display:none}
 @keyframes rxfade{0%{opacity:1}100%{opacity:0}}
+
+/* Pulse Bingung: kotak diam, background di dalam kotak berputar, target berlawanan arah jarum jam */
+@keyframes rxspin{to{rotate:360deg}}
+@keyframes rxspinr{to{rotate:-360deg}}
+@keyframes rxhyp{to{rotate:360deg}}
+@keyframes rxbeat{0%{scale:1}12%{scale:1.14}24%{scale:1.01}38%{scale:1.1}60%,100%{scale:1}}
+@keyframes rxbeat2{0%{opacity:.35}12%{opacity:.85}24%{opacity:.4}38%{opacity:.7}60%,100%{opacity:.35}}
+@keyframes rxcfin{from{opacity:0}}
+@keyframes rxdrunk{
+0%,100%{filter:blur(0) drop-shadow(0 0 0 rgba(255,60,120,0)) drop-shadow(0 0 0 rgba(60,200,255,0));translate:0 0;rotate:0deg}
+22%{filter:blur(2px) drop-shadow(8px 2px 0 rgba(255,60,120,.5)) drop-shadow(-8px -2px 0 rgba(60,200,255,.5));translate:5px -3px;rotate:1.3deg}
+50%{filter:blur(1px) drop-shadow(-6px 3px 0 rgba(255,60,120,.4)) drop-shadow(6px -3px 0 rgba(60,200,255,.4));translate:-4px 3px;rotate:-1.1deg}
+76%{filter:blur(2.6px) drop-shadow(5px -4px 0 rgba(255,60,120,.5)) drop-shadow(-5px 4px 0 rgba(60,200,255,.5));translate:3px 2px;rotate:.9deg}}
+#brr.cnfp::before,#brr.cnfp::after{content:"";position:fixed;inset:-60%;z-index:-1;pointer-events:none;will-change:rotate,scale}
+#brr.cnfp::before{background:radial-gradient(circle,rgba(8,8,14,.6) 0,rgba(8,8,14,0) 55%),repeating-conic-gradient(from 0deg,rgba(190,226,47,.30) 0 9deg,rgba(124,92,255,.26) 9deg 18deg,rgba(0,0,0,0) 18deg 27deg);filter:blur(3px);animation:rxcfin 1s ease-out both,rxhyp 14s linear infinite,rxbeat .9s ease-in-out infinite}
+#brr.cnfp::after{background:repeating-radial-gradient(circle at 50% 50%,rgba(255,255,255,.12) 0 16px,rgba(255,255,255,0) 16px 38px);-webkit-mask-image:radial-gradient(circle,#000 0,rgba(0,0,0,.25) 35%,transparent 55%);mask-image:radial-gradient(circle,#000 0,rgba(0,0,0,.25) 35%,transparent 55%);filter:blur(2px);animation:rxbeat .9s ease-in-out infinite,rxbeat2 .9s ease-in-out infinite}
+.rx.pt .rxst.dk.cf{background:rgba(8,8,14,.4)}
+#brr.cnfp>.rx{animation:rxdrunk 4.2s ease-in-out infinite;transform-origin:50% 50%;will-change:filter,translate,rotate}
+.rxst.cf .rxp{overflow:hidden}
+.rxst.cf .rxp::before{content:"";position:absolute;inset:-50%;pointer-events:none;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.24) 0 11.25deg,rgba(255,255,255,0) 11.25deg 22.5deg);animation:rxspin var(--sd,6s) linear var(--so,0s) infinite;will-change:rotate}
+.rxst.cf .rxp.tg{scale:1.1;z-index:1;box-shadow:0 0 0 2px rgba(255,255,255,.45),0 0 36px rgba(214,239,92,.85),inset 0 2px 0 rgba(255,255,255,.55)}
+.rxst.cf .rxp.tg::after{display:none}
+.rxst.cf .rxp.tg::before{background:repeating-conic-gradient(from 0deg,rgba(20,22,32,.30) 0 11.25deg,rgba(20,22,32,0) 11.25deg 22.5deg);animation-name:rxspinr}
 @media (prefers-reduced-motion:reduce){.rxp.tg::after{animation:none;opacity:0}}
 
 /* ===== Beranda v2: ilustrasi + animasi ===== */
@@ -2400,8 +2423,9 @@ const GM={
  tap:{t:"Pulse Klasik",base:{mudah:2300,sedang:1700,sulit:1250},min:{mudah:1300,sedang:950,sulit:650}},
  pat:{t:"Pulse Pola",base:{mudah:2600,sedang:2000,sulit:1500},min:{mudah:1500,sedang:1100,sulit:800}},
  flo:{t:"Pulse Alir",base:{mudah:2300,sedang:1700,sulit:1250},min:{mudah:1300,sedang:950,sulit:650}},
+ cnf:{t:"Pulse Bingung",base:{mudah:2800,sedang:2200,sulit:1700},min:{mudah:1700,sedang:1300,sulit:950}},
  pul:{t:"Pulse Tap"}};
-const MD=["tap","pat","flo"],MN={tap:"Klasik",pat:"Pola",flo:"Alir"},MS={tap:"Tekan semua yang menyala",pat:"Tekan semua kotak yang membentuk pola atau gambar",flo:"Kotak muncul tanpa henti"},RPP=10;
+const MD=["tap","pat","flo","cnf"],MN={tap:"Klasik",pat:"Pola",flo:"Alir",cnf:"Bingung"},MS={tap:"Tekan semua yang menyala",pat:"Tekan semua kotak yang membentuk pola atau gambar",flo:"Kotak muncul tanpa henti",cnf:"Semua kotak berputar, tekan yang berputar berlawanan arah jarum jam"},RPP=10;
 const TP={mudah:{c:3,r:3,kmin:1,kmax:3,bomb:null},sedang:{c:3,r:4,kmin:2,kmax:4,bomb:[6,.3]},sulit:{c:4,r:4,kmin:2,kmax:5,bomb:[3,.5]}};
 const rv=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
 const TF=g=>g==="pul";
@@ -2420,7 +2444,7 @@ const mix=(h,t,p)=>{const n=parseInt(h.slice(1),16),m=x=>Math.round(x+(t-x)*p);r
 const DIRS=[["up",0],["right",90],["down",180],["left",270]];
 const POS={up:"grid-column:2;grid-row:1",left:"grid-column:1;grid-row:2",right:"grid-column:3;grid-row:2",down:"grid-column:2;grid-row:3"};
 let B={ph:"setup",gen:false},tm=0,nx=0,cd=0,stt={};
-const clr=()=>{clearTimeout(tm);clearTimeout(nx);clearTimeout(cd);tm=nx=cd=0;Object.values(stt).forEach(clearTimeout);stt={}};
+const clr=()=>{el.classList.remove("cnfp");clearTimeout(tm);clearTimeout(nx);clearTimeout(cd);tm=nx=cd=0;Object.values(stt).forEach(clearTimeout);stt={}};
 function setup(){clr();B={ph:"setup",gen:false};window.brLauncher&&brLauncher()}
 window.rxPd=g=>["mudah","sedang","sulit"].map(l=>{const r=S.rec[g+"_"+l];return[l,LN[l],(TF(g)?TP[l].c+"×"+TP[l].r+" · ":"")+LV[l]+" nyawa"+(r?" · rekor "+r.score:""),{mudah:"#0f9a4c",sedang:"#ee8f06",sulit:"#d9283a"}[l]]});
 
@@ -2468,7 +2492,7 @@ function shell(){
   hearts();pageTheme()}
 function start(g,lvl){
   clr();
-  B={ph:"play",gen:false,g,lvl,sc:0,life:LV[lvl],T:(GM[g].base||GM.tap.base)[lvl],m:null,R:0,th:0,mc:0,cnt:{tap:0,pat:0},Tt:{tap:GM.tap.base[lvl],pat:GM.pat.base[lvl]},rts:[],ok:0,bad:0,st:0,bst:0,lock:true,ans:null,t0:0,last:null,cols:g==="str"?shuf(COLS).slice(0,lvl==="sulit"?6:4):null,RT:0,k:0,left:0,tl:0,stream:false,sr:0,sp:0,cs:null,nl:0,nb:0,lastc:-1,bw:0,lp:"",rec:(S.rec[g+"_"+lvl]||{}).score||0};
+  B={ph:"play",gen:false,g,lvl,sc:0,life:LV[lvl],T:(GM[g].base||GM.tap.base)[lvl],m:null,R:0,th:0,mc:0,cnt:{tap:0,pat:0,cnf:0},Tt:{tap:GM.tap.base[lvl],pat:GM.pat.base[lvl],cnf:GM.cnf.base[lvl]},rts:[],ok:0,bad:0,st:0,bst:0,lock:true,ans:null,t0:0,last:null,cols:g==="str"?shuf(COLS).slice(0,lvl==="sulit"?6:4):null,RT:0,k:0,left:0,tl:0,stream:false,sr:0,sp:0,cs:null,nl:0,nb:0,lastc:-1,bw:0,lp:"",rec:(S.rec[g+"_"+lvl]||{}).score||0};
   clearTimeout(memeT);dsv=0;shell();hud();countdown(3)}
 function countdown(n){
   const st=$("rxst");if(!st||B.ph!=="play")return;
@@ -2480,7 +2504,7 @@ function next(){
   const st=$("rxst"),tb=$("rxtb");if(!st||!tb)return;
   st.classList.remove("ok","no");B.lock=false;
   el.querySelectorAll(".rxkey,.rxco").forEach(b=>b.classList.remove("ok","no","hint"));
-  const g=B.g,m=g==="pul"?MD[Math.floor(B.R/RPP)%3]:null;
+  const g=B.g,m=g==="pul"?MD[Math.floor(B.R/RPP)%MD.length]:null;
   if(g==="pul"&&m!==B.m)enter(m);
   if(m==="flo"){if(!B.stream)startStream();return}
   if(g==="dir"){
@@ -2492,11 +2516,11 @@ function next(){
     st.innerHTML='<div class="rxw" style="color:'+cs[i].c+';text-shadow:0 0 30px '+cs[i].c+'66">'+cs[w].n+'</div>'
   }else if(g==="pul"){
     B.T=B.Tt[m];tb.style.background="";tb.style.transition="";tb.style.transform="";
-    const cf=TP[B.lvl],n=cf.c*cf.r,pt=m==="pat"?pickPat(cf):null,k=pt?pt.c.length:Math.min(cf.kmax,cf.kmin+Math.floor((B.cnt.tap+rnd(3))/4)),idx=shuf(Array.from({length:n},(_,i)=>i));
+    const cf=TP[B.lvl],n=cf.c*cf.r,pt=m==="pat"?pickPat(cf):null,k=pt?pt.c.length:Math.min(cf.kmax,cf.kmin+Math.floor(((m==="cnf"?B.cnt.cnf:B.cnt.tap)+rnd(3))/4)),idx=shuf(Array.from({length:n},(_,i)=>i));
     let tg=pt?pt.c:idx.slice(0,k);if(!pt&&k===1&&tg[0]===B.last)tg=[idx[1]];
-    const pool=idx.filter(x=>!tg.includes(x)),bc=!pt&&cf.bomb&&B.cnt.tap>=cf.bomb[0]&&Math.random()<cf.bomb[1]?(B.lvl==="sulit"&&B.cnt.tap>=10&&Math.random()<.4?2:1):0,bm=pool.slice(0,bc);
+    const pool=idx.filter(x=>!tg.includes(x)),bc=!pt&&m!=="cnf"&&cf.bomb&&B.cnt.tap>=cf.bomb[0]&&Math.random()<cf.bomb[1]?(B.lvl==="sulit"&&B.cnt.tap>=10&&Math.random()<.4?2:1):0,bm=pool.slice(0,bc);
     B.last=tg[0];B.k=k;B.left=k;B.ans="ok";B.RT=B.T*(1+(pt?.45:.55)*(k-1));
-    st.innerHTML='<div class="rxpl"><span>Ronde '+(B.R+1)+'</span><em>·</em><span>'+MN[m]+'</span><em>·</em><span>Sisa</span><b id="rxlf">'+k+'</b>'+(bc?'<span class="rxbw">Jangan tekan yang merah</span>':'')+(pt?'<span class="rxpn">'+(pt.pic?"Gambar":"Pola")+': '+pt.n+'</span>':'')+'</div><div class="rxpg" style="grid-template-columns:repeat('+cf.c+',1fr)">'+idx.slice().sort((a,b)=>a-b).map(i=>{const on=tg.includes(i),b=bm.includes(i);return'<button type="button" class="rxp'+(on?" tg":"")+(b?" bm":"")+'" data-t="'+(on?1:0)+'"'+(pt&&on?' style="animation-delay:'+tg.indexOf(i)*35+'ms"':'')+' aria-label="'+(b?"Jangan tekan":on?"Tekan":"Kotak")+'">'+(b?BOMB:"")+'</button>'}).join("")+'</div>';
+    st.innerHTML='<div class="rxpl"><span>Ronde '+(B.R+1)+'</span><em>·</em><span>'+MN[m]+'</span><em>·</em><span>Sisa</span><b id="rxlf">'+k+'</b>'+(bc?'<span class="rxbw">Jangan tekan yang merah</span>':'')+(pt?'<span class="rxpn">'+(pt.pic?"Gambar":"Pola")+': '+pt.n+'</span>':'')+'</div><div class="rxpg" style="grid-template-columns:repeat('+cf.c+',1fr)">'+idx.slice().sort((a,b)=>a-b).map(i=>{const on=tg.includes(i),b=bm.includes(i);return'<button type="button" class="rxp'+(on?" tg":"")+(b?" bm":"")+'" data-t="'+(on?1:0)+'"'+(pt&&on?' style="animation-delay:'+tg.indexOf(i)*35+'ms"':(m==="cnf"?' style="--so:-'+(Math.random()*9).toFixed(2)+'s;--sd:'+(5.5+Math.random()*3).toFixed(2)+'s"':''))+' aria-label="'+(b?"Jangan tekan":on?"Tekan":"Kotak")+'">'+(b?BOMB:"")+'</button>'}).join("")+'</div>';
     memeAssign(true)
   }else{
     const n=B.lvl==="mudah"?3:B.lvl==="sedang"?4:5,cnt=n*n,t=10+rnd(90),set=new Set([t]),cand=[];
@@ -2511,6 +2535,7 @@ function next(){
   tb.style.animation="rxdrain "+Math.round(TT)+"ms linear forwards";
   B.t0=B.tl=performance.now();clearTimeout(tm);tm=setTimeout(()=>resolve(null,null),TT+40)}
 function enter(m){
+  const sx=$("rxst");if(sx)sx.classList.toggle("cf",m==="cnf");el.classList.toggle("cnfp",m==="cnf");
   const ms=$("rxms");if(ms){ms.className="rxms";ms.innerHTML=""}
   if(B.stream){B.stream=false;B.cs=null;Object.values(stt).forEach(clearTimeout);stt={}}
   B.m=m;clearTimeout(tm)}
@@ -2756,7 +2781,7 @@ const CATS={
   {n:"Direction Rush",s:"Tekan arah panah",c:["#7db4ff","#2f66ee"],g:G.dir,pick:1,pd:()=>rxPd("dir"),pf:l=>{brPlay("brr");brR("dir",l)}},
   {n:"Stroop Test",s:"Pilih warna tinta",c:["#ffa468","#e8520c"],g:G.str,pick:1,pd:()=>rxPd("str"),pf:l=>{brPlay("brr");brR("str",l)}},
   {n:"Number Hunter",s:"Cari angka target",c:["#5fe09a","#0f9a4c"],g:G.num,pick:1,pd:()=>rxPd("num"),pf:l=>{brPlay("brr");brR("num",l)}},
-  {n:"Pulse Tap",s:"Klasik · Pola · Alir",c:["#ffe066","#e6a100"],g:G.tap,pick:1,pd:()=>rxPd("pul"),pf:l=>{brPlay("brr");brR("pul",l)}}]},
+  {n:"Pulse Tap",s:"Klasik · Pola · Alir · Bingung",c:["#ffe066","#e6a100"],g:G.tap,pick:1,pd:()=>rxPd("pul"),pf:l=>{brPlay("brr");brR("pul",l)}}]},
  logic:{t:"Logic",items:[
   {n:"Sudoku",s:"Pilih tingkat",c:["#7db4ff","#2f66ee"],g:G.sdk,pick:1,pd:()=>[["bebas","Bebas","Tanpa batas","#7b61ff"],["mudah","Mudah","40 petunjuk","#0f9a4c"],["sedang","Sedang","32 petunjuk","#ee8f06"],["sulit","Sulit","26 petunjuk","#d9283a"]]},
   {n:"Catur",s:"Lawan AI atau teman",c:["#ffd866","#ee8f06"],g:G.chs,pick:1,sd:1,ti:"Pilih lawan",pd:()=>[["mudah","Mudah","AI pemula","#0f9a4c"],["sedang","Sedang","AI menengah","#ee8f06"],["sulit","Sulit","AI kuat","#d9283a"],["friend","1v1 Teman","Tanpa AI","#7b61ff"]],pf:(l,sd)=>{brPlay("brc");brC(l,sd)}},

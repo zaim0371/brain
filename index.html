@@ -1168,7 +1168,7 @@ html[data-rxt="1"] #gbar .chip,html[data-rxt="2"] #gbar .chip,html[data-rxt="3"]
 
 /* ===== UNO v2 ===== */
 @property --t{syntax:"<color>";inherits:true;initial-value:#e5252c}
-#bru.gfs{--t:#e5252c;background:radial-gradient(78% 40% at 50% 45%,color-mix(in srgb,var(--t) 40%,transparent),transparent 72%),radial-gradient(120% 60% at 50% 115%,color-mix(in srgb,var(--t) 22%,transparent),transparent 70%),#10121a;padding:calc(env(safe-area-inset-top,0px) + 54px) 0 calc(env(safe-area-inset-bottom,0px) + 8px)!important;overflow:hidden;transition:--t .7s ease}
+#bru.gfs{--t:#e5252c;background:radial-gradient(78% 40% at 50% 45%,color-mix(in srgb,var(--t) 40%,transparent),transparent 72%),radial-gradient(120% 60% at 50% 115%,color-mix(in srgb,var(--t) 22%,transparent),transparent 70%),#10121a;padding:calc(env(safe-area-inset-top,0px) + 54px) 0 calc(env(safe-area-inset-bottom,0px) + 8px)!important;overflow:hidden}
 #gbar[data-g="u"] b{color:#fff}
 #gbar[data-g="u"] .chip{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:#fff;box-shadow:none}
 .un{position:relative;height:100%;display:flex;flex-direction:column;color:#fff;font-family:Outfit,Inter,sans-serif;user-select:none;-webkit-user-select:none;animation:unfi .5s both}
@@ -1210,7 +1210,7 @@ html[data-rxt="1"] #gbar .chip,html[data-rxt="2"] #gbar .chip,html[data-rxt="3"]
 @keyframes unhint{50%{transform:translateY(-8px)}}
 .udk small{position:absolute;left:-10px;right:-10px;bottom:-26px;text-align:center;font:700 12px Outfit,sans-serif;opacity:.85}
 .urg{position:relative;width:min(52vw,210px);aspect-ratio:1;display:grid;place-items:center;flex:none}
-.udir{position:absolute;inset:0;color:var(--t);animation:unsp 18s linear infinite;filter:drop-shadow(0 0 6px var(--t))}
+.udir{position:absolute;inset:0;color:var(--t);animation:unsp 18s linear infinite}
 .udir.rv{animation-direction:reverse}.udir svg{width:100%;height:100%}
 .upile{position:relative;--w:min(32vw,124px);width:var(--w);aspect-ratio:.68}
 .upile .uc{position:absolute;left:0;top:0;transform:rotate(var(--r))}
@@ -3760,7 +3760,7 @@ function take(p,k){const g=[];
 const adv=skip=>{B.cur=(B.cur+B.dir*(skip?2:1)+B.n*2)%B.n};
 const desc=c=>(c.c<4?CF[c.c]+" ":"")+DN(c.v);
 function step(){render();clearTimeout(tm);if(B.ph!=="play"||B.over)return;const me=B;
- if(B.mode==="net"){netBc();if(B.host&&B.bots.has(B.cur))tm=setTimeout(()=>{if(B===me&&!B.over&&B.ph==="play"&&B.bots.has(B.cur))ai()},900+Math.random()*600);return}
+ if(B.mode==="net"){netBc();if(B.host&&B.bots.has(B.cur))tm=setTimeout(()=>{if(B===me&&!B.over&&B.ph==="play"&&B.bots.has(B.cur))ai()},600+Math.random()*400);return}
  if(B.mode==="off"){
   if(B.cur!==B.view&&!B.hold)tm=setTimeout(()=>{if(B!==me)return;B.hold=1;render();tm=setTimeout(()=>{if(B===me){B.pop=1;render()}},550)},750);
   return}
@@ -3947,6 +3947,7 @@ function tryPlay(c,fr){
 // ----- online (PeerJS): host mengatur game, pemain lain kirim aksi -----
 const OL={role:"",name:S.on||"",code:"",st:"",err:"",names:[],seat:0,conns:[],peer:null,hc:null,busy:0,tok:"",toks:[""],seen:[],hbt:0,syt:0,wd:0,rc:0,hbAt:0};
 const CHR="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let qu=[],qr=0;
+const PCFG={config:{iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:"stun:global.stun.twilio.com:3478"},{urls:["turn:openrelay.metered.ca:80","turn:openrelay.metered.ca:443","turn:openrelay.metered.ca:443?transport=tcp"],username:"openrelayproject",credential:"openrelayproject"}],iceCandidatePoolSize:4}};
 const slim=c=>({c:c.c,v:c.v,id:c.id,rot:c.rot});
 function nsend(o){try{OL.hc&&OL.hc.open&&OL.hc.send(o)}catch(e){}}
 function sendTo(k,o){const c=OL.conns[k];try{c&&c.open&&c.send(o)}catch(e){}}
@@ -3986,7 +3987,7 @@ el.addEventListener("input",e=>{if(!B.onl)return;const t=e.target;if(t.id==="uon
 // --- host ---
 async function ohost(){if(OL.busy)return;OL.busy=1;OL.err="";OL.st="Menghubungkan…";onlDraw();
  try{await loadPeer()}catch(e){OL.busy=0;OL.st="";OL.err="PeerJS gagal dimuat. Kalau kamu buka lewat preview di aplikasi Claude, koneksi internet diblokir: buka file ini di Chrome.";onlDraw();return}
- const mk=n=>{const code=Array.from({length:5},()=>CHR[zR(CHR.length)]).join(""),p=new Peer("zcuno-"+code.toLowerCase());
+ const mk=n=>{const code=Array.from({length:5},()=>CHR[zR(CHR.length)]).join(""),p=new Peer("zcuno-"+code.toLowerCase(),PCFG);
   const to=setTimeout(()=>{if(OL.role==="host")return;try{p.destroy()}catch(e){}OL.busy=0;OL.st="";OL.err="Server PeerJS tidak merespons. Coba buka file ini di browser (Chrome) atau cek koneksi.";onlDraw()},10000);
   p.on("open",()=>{clearTimeout(to);OL.busy=0;OL.role="host";OL.peer=p;OL.code=code;OL.names=[OL.name];OL.conns=[null];OL.toks=[""];OL.seen=[0];OL.st="";hbStart();onlDraw()});
   p.on("connection",hconn);p.on("disconnected",()=>{try{p.reconnect()}catch(e){}});
@@ -4039,16 +4040,19 @@ function hact(seat,m){
   if(!c||!can(c)||(c.c===4&&!(col>=0&&col<4))){sendTo(seat,snap(seat,null));return}
   play(seat,c,col)}}
 // --- pemain (client) ---
-async function ojoin(){const code=OL.code.trim().toUpperCase();
+async function ojoin(){const code=OL.code.replace(/[^A-Za-z0-9]/g,"").toUpperCase();OL.code=code;
  if(code.length<4){OL.err="Masukkan kode room.";onlDraw();return}
  if(OL.busy)return;OL.busy=1;OL.err="";OL.st="Menghubungkan…";onlDraw();
  try{await loadPeer()}catch(e){OL.busy=0;OL.st="";OL.err="PeerJS gagal dimuat. Cek internet.";onlDraw();return}
- let done=0;const p=new Peer();OL.peer=p;
- const fail=t=>{if(done)return;done=1;try{p.destroy()}catch(e){}OL.peer=null;OL.hc=null;OL.busy=0;OL.st="";OL.err=t;onlDraw()};
- p.on("error",er=>fail(er.type==="peer-unavailable"?"Room tidak ditemukan.":"Gagal: "+(er.type||"koneksi")));
- p.on("open",()=>{const c=p.connect("zcuno-"+code.toLowerCase(),{reliable:true}),to=setTimeout(()=>fail("Tidak bisa terhubung ke room."),12000);OL.hc=c;
-  c.on("open",()=>{clearTimeout(to);done=1;OL.busy=0;OL.role="client";OL.st="";OL.names=[];cwire(c);c.send({t:"hello",name:OL.name,tok:ctok()});onlDraw()});
-  c.on("error",()=>{})})}
+ let done=0,tries=0,to=null;const p=new Peer(PCFG);OL.peer=p;
+ const fail=t=>{if(done)return;done=1;clearTimeout(to);try{p.destroy()}catch(e){}OL.peer=null;OL.hc=null;OL.busy=0;OL.st="";OL.err=t;onlDraw()};
+ const att=()=>{if(done)return;tries++;OL.st="Menghubungkan… ("+tries+")";onlDraw();
+  const c=p.connect("zcuno-"+code.toLowerCase(),{reliable:true,serialization:"json"});OL.hc=c;let ok=0;
+  to=setTimeout(()=>{if(ok||done)return;try{c.close()}catch(e){}if(tries<3)att();else fail("Tidak bisa terhubung ke room. Coba lagi / ganti jaringan.")},9000);
+  c.on("open",()=>{if(done)return;ok=1;clearTimeout(to);done=1;OL.busy=0;OL.role="client";OL.st="";OL.names=[];cwire(c);c.send({t:"hello",name:OL.name,tok:ctok()});onlDraw()});
+  c.on("error",()=>{})};
+ p.on("error",er=>{if(er.type==="peer-unavailable"){if(tries<3){clearTimeout(to);setTimeout(att,1200)}else fail("Room tidak ditemukan. Pastikan host masih membuka lobby.")}else fail("Gagal: "+(er.type||"koneksi"))});
+ p.on("open",att)}
 function ctok(){if(!OL.tok){OL.tok=S.tk||(Math.random().toString(36).slice(2,10)+Date.now().toString(36));if(S.tk!==OL.tok){S.tk=OL.tok;save()}}return OL.tok}
 function cwire(c){OL.hc=c;OL.hbAt=Date.now();c.on("data",m=>{OL.hbAt=Date.now();cdata(m)});c.on("close",()=>{if(OL.hc===c&&OL.role==="client")cdrop()});c.on("error",()=>{});
  clearInterval(OL.wd);OL.wd=setInterval(()=>{if(OL.role!=="client"){clearInterval(OL.wd);return}if(OL.hc===c&&Date.now()-OL.hbAt>15000){try{c.close()}catch(e){}if(OL.hc===c)cdrop()}},3000)}
@@ -4058,12 +4062,12 @@ function cdrop(){if(OL.role!=="client"||OL.rc)return;OL.hc=null;OL.rc=1;let n=0;
   if(++n>8){OL.rc=0;cleft();return}
   toast("Koneksi terputus, menyambung ulang…",1800);
   let fin=0;const next=()=>{if(fin)return;fin=1;setTimeout(tryR,1200)};
-  const go=pp=>{try{const c=pp.connect("zcuno-"+OL.code.toLowerCase(),{reliable:true}),to=setTimeout(()=>{try{c.close()}catch(e){}next()},7000);
+  const go=pp=>{try{const c=pp.connect("zcuno-"+OL.code.toLowerCase(),{reliable:true,serialization:"json"}),to=setTimeout(()=>{try{c.close()}catch(e){}next()},7000);
     c.on("open",()=>{if(fin)return;fin=1;clearTimeout(to);OL.rc=0;cwire(c);try{c.send({t:"hello",name:OL.name,tok:ctok()})}catch(e){}});
     c.on("error",()=>{})}catch(e){next()}};
   const pr=OL.peer;
   if(pr&&!pr.destroyed&&!pr.disconnected)go(pr);
-  else{try{pr&&pr.destroy()}catch(e){}const np=new Peer();OL.peer=np;np.on("open",()=>go(np));np.on("error",()=>next())}};
+  else{try{pr&&pr.destroy()}catch(e){}const np=new Peer(PCFG);OL.peer=np;np.on("open",()=>go(np));np.on("error",()=>next())}};
  setTimeout(tryR,600)}
 function csync(){clearInterval(OL.syt);let n=0;OL.syt=setInterval(()=>{if(OL.role!=="client"||B.cl||++n>14){clearInterval(OL.syt);return}nsend({t:"sync"})},2500)}
 function cleft(){if(OL.role!=="client")return;netLeave();toast("Koneksi ke host terputus",2000);setup()}
@@ -4076,8 +4080,8 @@ function cdata(m){if(!m||typeof m!=="object")return;
 async function pump(){if(qr)return;qr=1;
  try{while(qu.length){const s=qu.shift(),ev=s.ev;
   if(B.lf){await B.lf;B.lf=null}
-  if(B.cl&&B.built&&!RM&&ev&&ev.k==="play"&&ev.p!==s.seat){const a=$q('.up[data-p="'+ev.p+'"] .av'),t=$q("#upile");
-   if(a&&t){const r=a.getBoundingClientRect(),q=t.getBoundingClientRect();await fly(card(ev.c),{left:r.left,top:r.top,width:r.width*.9,height:r.height*1.3},{left:q.left,top:q.top,width:q.width,height:q.height},{r:ev.c.rot,r0:-10,d:520})}}
+  if(B.cl&&B.built&&!RM&&!qu.length&&ev&&ev.k==="play"&&ev.p!==s.seat){const a=$q('.up[data-p="'+ev.p+'"] .av'),t=$q("#upile");
+   if(a&&t){const r=a.getBoundingClientRect(),q=t.getBoundingClientRect();await fly(card(ev.c),{left:r.left,top:r.top,width:r.width*.9,height:r.height*1.3},{left:q.left,top:q.top,width:q.width,height:q.height},{r:ev.c.rot,r0:-10,d:300})}}
   napply(s)}}finally{qr=0}}
 function napply(s){const me=s.seat,ev=s.ev;
  if(!B.cl||B.ph!=="play"){clearTimeout(tm);el.innerHTML="";B={ph:"play",gen:false,mode:"net",cl:1,host:0,view:me,bots:new Set(),n:s.names.length,names:s.names,H:[],deck:{length:0},disc:[],top:null,col:0,dir:1,pen:0,drawn:null,pick:null,cur:0,over:false,win:-1,msg:"",fresh:0,busy:0,hold:0,pop:0,sel:null,newIds:new Set(),opAnim:[],built:0,dealing:0,pileOn:1,show:null,dd:{},org:null,rev:0,lf:null}}

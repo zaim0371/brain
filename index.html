@@ -3877,7 +3877,7 @@ function render(){
  else if(B.dealing)hint=B.dealing===1?"Mengocok kartu…":"Membagi kartu…";
  else if(B.hold)hint="Giliran "+nm(B.cur);
  else if(yt)hint=B.pen?"Tumpuk "+(B.top.v===14?"+4":"+2")+" atau ambil "+B.pen:B.drawn?"Mainkan kartu itu atau lewati":B.sel?"Ketuk lagi untuk main":(B.mode==="off"?"Giliran "+nm(B.cur):"Giliranmu")+" · seret kartu ke tumpukan";
- else hint="Giliran "+nm(B.cur)+"…";
+ else hint=B.lost&&B.lost.has(B.cur)?"Menunggu "+nm(B.cur)+" tersambung lagi…":"Giliran "+nm(B.cur)+"…";
  $q("#ust").innerHTML="<b>"+hint+"</b><span>"+(B.dealing?"":B.msg||"")+"</span>";
  $q("#uact").innerHTML=yt&&B.drawn?'<button type="button" class="chip" id="unps">Lewati giliran</button>':"<span>"+(B.mode==="off"?"Kartu "+nm(v):"Kartumu")+" "+B.H[v].length+" · Tumpukan "+B.deck.length+"</span>";
  if(B.dealing!==1)paintHand();
@@ -3897,7 +3897,7 @@ function res(){
 // ----- mulai: kocok & bagi -----
 function init(mode,names){
  clearTimeout(tm);el.innerHTML="";const n=names.length;
- B={ph:"play",gen:false,mode,n,names,H:[],deck:mk(),disc:[],top:null,col:0,dir:1,pen:0,drawn:null,pick:null,cur:0,view:0,over:false,win:-1,msg:"Semoga beruntung!",fresh:0,busy:1,hold:+(mode==="off"),pop:0,sel:null,newIds:new Set(),opAnim:[],built:0,dealing:1,pileOn:0,show:null,dd:{},org:null,rev:0,bots:new Set(),host:+(mode==="net")};
+ B={ph:"play",gen:false,mode,n,names,H:[],deck:mk(),disc:[],top:null,col:0,dir:1,pen:0,drawn:null,pick:null,cur:0,view:0,over:false,win:-1,msg:"Semoga beruntung!",fresh:0,busy:1,hold:+(mode==="off"),pop:0,sel:null,newIds:new Set(),opAnim:[],built:0,dealing:1,pileOn:0,show:null,dd:{},org:null,rev:0,bots:new Set(),lost:new Set(),host:+(mode==="net")};
  for(let p=0;p<n;p++)B.H.push([]);
  for(let r=0;r<7;r++)for(let p=0;p<n;p++)B.H[p].push(B.deck.pop());
  B.H[0].forEach(c=>B.newIds.add(c.id));
@@ -3945,7 +3945,7 @@ function tryPlay(c,fr){
  if(c.c===4){B.sel=null;B.pick=c;render();return true}
  play(B.cur,c,undefined,fr);return true}
 // ----- online (PeerJS): host mengatur game, pemain lain kirim aksi -----
-const OL={role:"",name:S.on||"",code:"",st:"",err:"",names:[],seat:0,conns:[],peer:null,hc:null,busy:0};
+const OL={role:"",name:S.on||"",code:"",st:"",err:"",names:[],seat:0,conns:[],peer:null,hc:null,busy:0,tok:"",toks:[""],seen:[],hbt:0,syt:0,wd:0,rc:0,hbAt:0};
 const CHR="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let qu=[],qr=0;
 const slim=c=>({c:c.c,v:c.v,id:c.id,rot:c.rot});
 function nsend(o){try{OL.hc&&OL.hc.open&&OL.hc.send(o)}catch(e){}}
@@ -3953,7 +3953,10 @@ function sendTo(k,o){const c=OL.conns[k];try{c&&c.open&&c.send(o)}catch(e){}}
 function sendAll(o){for(let k=1;k<OL.conns.length;k++)sendTo(k,o)}
 function snap(k,ev){return{t:"st",seat:k,names:B.names,cnt:B.H.map(h=>h.length),hand:B.H[k].map(slim),disc:B.disc.slice(-3).map(slim),top:slim(B.top),col:B.col,dir:B.dir,pen:B.pen,drawn:B.cur===k&&B.drawn?B.drawn.id:0,cur:B.cur,dk:B.deck.length,msg:B.msg,over:B.over,win:B.win,ev}}
 function netBc(){if(B.mode!=="net"||!B.host)return;const ev=B.ev||null;B.ev=null;for(let k=1;k<B.n;k++)sendTo(k,snap(k,ev))}
-function netLeave(){try{OL.peer&&OL.peer.destroy()}catch(e){}OL.peer=null;OL.hc=null;OL.conns=[];OL.role="";OL.st="";OL.names=[];OL.busy=0;qu=[]}
+function netLeave(){const p=OL.peer,cl=OL.role==="client";if(cl)nsend({t:"bye"});
+ clearInterval(OL.hbt);clearInterval(OL.syt);clearInterval(OL.wd);
+ try{if(cl)setTimeout(()=>{try{p.destroy()}catch(e){}},250);else p&&p.destroy()}catch(e){}
+ OL.peer=null;OL.hc=null;OL.conns=[];OL.toks=[""];OL.seen=[];OL.role="";OL.st="";OL.names=[];OL.busy=0;OL.rc=0;qu=[]}
 function loadPeer(){if(window.Peer)return Promise.resolve();const U=["https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js","https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"];
  const one=u=>new Promise((ok,no)=>{const s=document.createElement("script"),t=setTimeout(()=>{s.remove();no(1)},6000);s.src=u;s.onload=()=>{clearTimeout(t);window.Peer?ok():no(1)};s.onerror=()=>{clearTimeout(t);no(1)};document.head.appendChild(s)});
  return one(U[0]).catch(()=>one(U[1]))}
@@ -3985,27 +3988,51 @@ async function ohost(){if(OL.busy)return;OL.busy=1;OL.err="";OL.st="Menghubungka
  try{await loadPeer()}catch(e){OL.busy=0;OL.st="";OL.err="PeerJS gagal dimuat. Kalau kamu buka lewat preview di aplikasi Claude, koneksi internet diblokir: buka file ini di Chrome.";onlDraw();return}
  const mk=n=>{const code=Array.from({length:5},()=>CHR[zR(CHR.length)]).join(""),p=new Peer("zcuno-"+code.toLowerCase());
   const to=setTimeout(()=>{if(OL.role==="host")return;try{p.destroy()}catch(e){}OL.busy=0;OL.st="";OL.err="Server PeerJS tidak merespons. Coba buka file ini di browser (Chrome) atau cek koneksi.";onlDraw()},10000);
-  p.on("open",()=>{clearTimeout(to);OL.busy=0;OL.role="host";OL.peer=p;OL.code=code;OL.names=[OL.name];OL.conns=[null];OL.st="";onlDraw()});
+  p.on("open",()=>{clearTimeout(to);OL.busy=0;OL.role="host";OL.peer=p;OL.code=code;OL.names=[OL.name];OL.conns=[null];OL.toks=[""];OL.seen=[0];OL.st="";hbStart();onlDraw()});
   p.on("connection",hconn);p.on("disconnected",()=>{try{p.reconnect()}catch(e){}});
   p.on("error",er=>{if(er.type==="unavailable-id"&&n<4){try{p.destroy()}catch(e){}mk(n+1);return}if(OL.role==="host")return;OL.busy=0;OL.st="";OL.err="Gagal: "+(er.type||"koneksi");onlDraw()})};
  mk(0)}
 function hconn(c){
  c.on("data",m=>{if(!m||typeof m!=="object")return;
   if(m.t==="hello"){
+   const tok=String(m.tok||"").slice(0,40),k0=tok?OL.toks.indexOf(tok):-1;
+   if(k0>0){const old=OL.conns[k0];OL.conns[k0]=c;OL.seen[k0]=Date.now();if(old&&old!==c){try{old.close()}catch(e){}}
+    if(B.onl){lobbyBc();onlDraw()}else if(B.mode==="net"&&B.host)revive(k0);return}
    if(!B.onl||OL.names.length>=5){try{c.send({t:"full",r:B.onl?"Room penuh":"Game sudah berjalan"})}catch(e){}setTimeout(()=>{try{c.close()}catch(e){}},400);return}
    if(OL.conns.includes(c))return;
-   OL.names.push(String(m.name||"Pemain").slice(0,12)||"Pemain");OL.conns.push(c);lobbyBc();onlDraw()}
-  else{const k=OL.conns.indexOf(c);if(k>0)hact(k,m)}});
- c.on("close",()=>hleft(c));c.on("error",()=>hleft(c))}
-function hleft(c){const k=OL.conns.indexOf(c);if(k<1)return;
- if(B.onl){OL.conns.splice(k,1);OL.names.splice(k,1);lobbyBc();onlDraw();return}
- if(B.mode==="net"&&B.host&&!B.bots.has(k)){B.bots.add(k);OL.conns[k]=null;toast(B.names[k]+" keluar, diganti AI",1800);
-  if(!B.over&&B.cur===k&&!B.busy&&B.ph==="play"){const me=B;clearTimeout(tm);tm=setTimeout(()=>{if(B===me&&!B.over&&B.bots.has(B.cur)&&!B.busy)ai()},900)}}}
-function ostart(){if(OL.role!=="host"||OL.names.length<2)return;sendAll({t:"go"});init("net",OL.names.slice())}
-function netAgain(){const ns=B.names.slice(),bs=new Set(B.bots);sendAll({t:"go"});init("net",ns);bs.forEach(k=>B.bots.add(k))}
+   OL.names.push(String(m.name||"Pemain").slice(0,12)||"Pemain");OL.conns.push(c);OL.toks.push(tok);OL.seen.push(Date.now());lobbyBc();onlDraw();return}
+  const k=OL.conns.indexOf(c);if(k<1)return;
+  OL.seen[k]=Date.now();
+  if(m.t==="bye"){hleft(c,1);return}
+  hact(k,m)});
+ c.on("close",()=>hleft(c));c.on("error",()=>{})}
+// pemain yang koneksinya putus TIDAK langsung diganti bot: ditunggu 20 dtk, dan bisa kembali kapan saja
+function hleft(c,bye){const k=OL.conns.indexOf(c);if(k<1)return;
+ if(B.onl){OL.conns.splice(k,1);OL.names.splice(k,1);OL.toks.splice(k,1);OL.seen.splice(k,1);lobbyBc();onlDraw();return}
+ if(B.mode!=="net"||!B.host)return;
+ OL.conns[k]=null;if(bye)toBot(k,"keluar, diganti AI");else lose(k)}
+function lose(k){if(k<1||B.over||B.bots.has(k)||B.lost.has(k))return;const me=B;B.lost.add(k);
+ toast(B.names[k]+" terputus, ditunggu sebentar…",2200);B.msg=B.names[k]+" terputus…";render();
+ setTimeout(()=>{if(B===me&&!me.over&&me.lost.has(k))toBot(k,"belum kembali, diganti AI sementara")},20000)}
+function toBot(k,txt){if(B.bots.has(k))return;B.lost.delete(k);B.bots.add(k);toast(B.names[k]+" "+txt,2200);
+ if(!B.over&&B.cur===k&&!B.busy&&B.ph==="play"){const me=B;clearTimeout(tm);tm=setTimeout(()=>{if(B===me&&!me.over&&me.bots.has(me.cur)&&!me.busy)ai()},900)}}
+function revive(k){if(B.mode!=="net"||!B.host||!B.lost)return;const was=B.lost.has(k)||B.bots.has(k);B.lost.delete(k);B.bots.delete(k);OL.seen[k]=Date.now();
+ if(was){toast(B.names[k]+" kembali",1500);B.msg=B.names[k]+" kembali ke permainan";render()}
+ if(!B.dealing)sendTo(k,snap(k,null))}
+function hbStart(){clearInterval(OL.hbt);OL.hbt=setInterval(()=>{if(OL.role!=="host")return;sendAll({t:"hb"});
+ if(B.mode==="net"&&B.host&&B.ph==="play"&&!B.over){const now=Date.now();for(let k=1;k<B.n;k++)if(OL.conns[k]&&!B.lost.has(k)&&!B.bots.has(k)&&now-(OL.seen[k]||now)>20000)lose(k)}},3000)}
+function ostart(){if(OL.role!=="host")return;
+ for(let k=OL.conns.length-1;k>=1;k--){const c=OL.conns[k];if(!c||!c.open){OL.conns.splice(k,1);OL.names.splice(k,1);OL.toks.splice(k,1);OL.seen.splice(k,1)}}
+ lobbyBc();if(OL.names.length<2){onlDraw();toast("Pemain lain belum tersambung",1800);return}
+ const t=Date.now();OL.seen=OL.names.map(()=>t);sendAll({t:"go"});init("net",OL.names.slice())}
+function netAgain(){const ns=B.names.slice(),bs=new Set([...B.bots,...B.lost]),t=Date.now();OL.seen=ns.map(()=>t);sendAll({t:"go"});init("net",ns);bs.forEach(k=>B.bots.add(k))}
 function hact(seat,m){
- if(B.mode!=="net"||!B.host||B.ph!=="play"||B.over)return;
- if(B.cur!==seat||B.busy||B.dealing||B.bots.has(seat)){sendTo(seat,snap(seat,null));return}
+ if(B.mode!=="net"||!B.host)return;
+ if(B.lost.has(seat)||B.bots.has(seat))revive(seat);
+ if(m.t==="hb")return;
+ if(m.t==="sync"){if(B.ph==="play"&&!B.dealing)sendTo(seat,snap(seat,null));return}
+ if(B.ph!=="play"||B.over)return;
+ if(B.cur!==seat||B.busy||B.dealing){sendTo(seat,snap(seat,null));return}
  if(m.t==="draw"){if(!B.drawn)drawAct(seat);else sendTo(seat,snap(seat,null));return}
  if(m.t==="pass"){if(B.drawn){B.drawn=null;B.sel=null;B.msg=nm(seat)+" melewati giliran";B.ev=null;adv();step()}else sendTo(seat,snap(seat,null));return}
  if(m.t==="play"){const c=B.H[seat].find(x=>x.id===m.id),col=+m.col;
@@ -4020,13 +4047,31 @@ async function ojoin(){const code=OL.code.trim().toUpperCase();
  const fail=t=>{if(done)return;done=1;try{p.destroy()}catch(e){}OL.peer=null;OL.hc=null;OL.busy=0;OL.st="";OL.err=t;onlDraw()};
  p.on("error",er=>fail(er.type==="peer-unavailable"?"Room tidak ditemukan.":"Gagal: "+(er.type||"koneksi")));
  p.on("open",()=>{const c=p.connect("zcuno-"+code.toLowerCase(),{reliable:true}),to=setTimeout(()=>fail("Tidak bisa terhubung ke room."),12000);OL.hc=c;
-  c.on("open",()=>{clearTimeout(to);done=1;OL.busy=0;OL.role="client";OL.st="";OL.names=[];c.send({t:"hello",name:OL.name});onlDraw()});
-  c.on("data",cdata);c.on("close",cleft);c.on("error",()=>{})})}
-function cleft(){if(OL.role!=="client")return;netLeave();toast("Host keluar dari room",2000);setup()}
+  c.on("open",()=>{clearTimeout(to);done=1;OL.busy=0;OL.role="client";OL.st="";OL.names=[];cwire(c);c.send({t:"hello",name:OL.name,tok:ctok()});onlDraw()});
+  c.on("error",()=>{})})}
+function ctok(){if(!OL.tok){OL.tok=S.tk||(Math.random().toString(36).slice(2,10)+Date.now().toString(36));if(S.tk!==OL.tok){S.tk=OL.tok;save()}}return OL.tok}
+function cwire(c){OL.hc=c;OL.hbAt=Date.now();c.on("data",m=>{OL.hbAt=Date.now();cdata(m)});c.on("close",()=>{if(OL.hc===c&&OL.role==="client")cdrop()});c.on("error",()=>{});
+ clearInterval(OL.wd);OL.wd=setInterval(()=>{if(OL.role!=="client"){clearInterval(OL.wd);return}if(OL.hc===c&&Date.now()-OL.hbAt>15000){try{c.close()}catch(e){}if(OL.hc===c)cdrop()}},3000)}
+// koneksi ke host putus: coba sambung ulang (kursi tetap milikmu), baru menyerah setelah 8x
+function cdrop(){if(OL.role!=="client"||OL.rc)return;OL.hc=null;OL.rc=1;let n=0;
+ const tryR=()=>{if(OL.role!=="client"){OL.rc=0;return}
+  if(++n>8){OL.rc=0;cleft();return}
+  toast("Koneksi terputus, menyambung ulang…",1800);
+  let fin=0;const next=()=>{if(fin)return;fin=1;setTimeout(tryR,1200)};
+  const go=pp=>{try{const c=pp.connect("zcuno-"+OL.code.toLowerCase(),{reliable:true}),to=setTimeout(()=>{try{c.close()}catch(e){}next()},7000);
+    c.on("open",()=>{if(fin)return;fin=1;clearTimeout(to);OL.rc=0;cwire(c);try{c.send({t:"hello",name:OL.name,tok:ctok()})}catch(e){}});
+    c.on("error",()=>{})}catch(e){next()}};
+  const pr=OL.peer;
+  if(pr&&!pr.destroyed&&!pr.disconnected)go(pr);
+  else{try{pr&&pr.destroy()}catch(e){}const np=new Peer();OL.peer=np;np.on("open",()=>go(np));np.on("error",()=>next())}};
+ setTimeout(tryR,600)}
+function csync(){clearInterval(OL.syt);let n=0;OL.syt=setInterval(()=>{if(OL.role!=="client"||B.cl||++n>14){clearInterval(OL.syt);return}nsend({t:"sync"})},2500)}
+function cleft(){if(OL.role!=="client")return;netLeave();toast("Koneksi ke host terputus",2000);setup()}
 function cdata(m){if(!m||typeof m!=="object")return;
+ if(m.t==="hb"){nsend({t:"hb"});return}
  if(m.t==="full"){netLeave();OL.err=m.r||"Room penuh";onlDraw();return}
  if(m.t==="lobby"){OL.names=m.names;OL.seat=m.seat;onlDraw();return}
- if(m.t==="go"){if(!B.onl){clearTimeout(tm);el.innerHTML="";B={ph:"setup",gen:false,onl:1}}OL.st="Host mengocok kartu…";qu=[];onlDraw();return}
+ if(m.t==="go"){if(!B.onl){clearTimeout(tm);el.innerHTML="";B={ph:"setup",gen:false,onl:1}}OL.st="Host mengocok kartu…";qu=[];onlDraw();csync();return}
  if(m.t==="st"){qu.push(m);pump()}}
 async function pump(){if(qr)return;qr=1;
  try{while(qu.length){const s=qu.shift(),ev=s.ev;

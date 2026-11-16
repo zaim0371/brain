@@ -3947,7 +3947,7 @@ function tryPlay(c,fr){
 // ----- online (PeerJS): host mengatur game, pemain lain kirim aksi -----
 const OL={role:"",name:S.on||"",code:"",st:"",err:"",names:[],seat:0,conns:[],peer:null,hc:null,busy:0,tok:"",toks:[""],seen:[],hbt:0,syt:0,wd:0,rc:0,hbAt:0};
 const CHR="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let qu=[],qr=0;
-const PCFG={config:{iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:"stun:global.stun.twilio.com:3478"},{urls:["turn:openrelay.metered.ca:80","turn:openrelay.metered.ca:443","turn:openrelay.metered.ca:443?transport=tcp"],username:"openrelayproject",credential:"openrelayproject"}],iceCandidatePoolSize:4}};
+const PCFG={config:{iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:"stun:global.stun.twilio.com:3478"},{urls:"stun:stun.cloudflare.com:3478"},{urls:["turn:openrelay.metered.ca:80","turn:openrelay.metered.ca:443","turn:openrelay.metered.ca:80?transport=tcp","turn:openrelay.metered.ca:443?transport=tcp","turns:openrelay.metered.ca:443?transport=tcp"],username:"openrelayproject",credential:"openrelayproject"}],iceCandidatePoolSize:4}};
 const slim=c=>({c:c.c,v:c.v,id:c.id,rot:c.rot});
 function nsend(o){try{OL.hc&&OL.hc.open&&OL.hc.send(o)}catch(e){}}
 function sendTo(k,o){const c=OL.conns[k];try{c&&c.open&&c.send(o)}catch(e){}}
@@ -3963,36 +3963,89 @@ function loadPeer(){if(window.Peer)return Promise.resolve();const U=["https://cd
  return one(U[0]).catch(()=>one(U[1]))}
 function lobbyBc(){for(let k=1;k<OL.conns.length;k++)sendTo(k,{t:"lobby",names:OL.names,seat:k})}
 // --- lobby ---
-function onlDraw(){if(!B.onl)return;
- const h=OL.role==="host";let s='<div class="q glass"><h3>Main online</h3>';
- if(!OL.role){
-  s+='<p class="brp">Beda HP atau laptop, lewat internet. Satu orang buat room, yang lain gabung pakai kode.</p><div class="lb">Namamu</div><input class="unin" id="uonm" maxlength="12" autocomplete="off" placeholder="Nama" value="'+esc(OL.name)+'" style="margin-bottom:12px"><button type="button" class="chip on brgo" id="uohost">Buat room</button>'
-   +'<div class="lb" style="margin-top:16px">Atau gabung room</div><input class="unin" id="uocd" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="Kode room" value="'+esc(OL.code)+'" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.2em"><button type="button" class="chip brgo" id="uojoin">Gabung</button>'}
+function olCss(){if(document.getElementById("olcss"))return;const st=document.createElement("style");st.id="olcss";st.textContent=`
+.olc{max-width:420px;margin:0 auto;padding:18px 16px 20px;border-radius:26px;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 50px rgba(0,0,0,.35);color:#fff;font-family:Outfit,sans-serif;text-align:left}
+.olh{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.olh i{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font:400 22px/1 "Lilita One",Outfit,sans-serif;font-style:normal;background:linear-gradient(135deg,#ff4d4d,#ffb300);box-shadow:0 6px 16px rgba(255,77,77,.4);transform:rotate(-6deg)}
+.olh h3{margin:0;font:400 24px/1 "Lilita One",Outfit,sans-serif;letter-spacing:.02em}
+.olh small{display:block;opacity:.65;font-size:12px;margin-top:3px}
+.olp{margin-left:auto;font-size:11px;font-weight:700;padding:5px 10px;border-radius:99px;background:rgba(120,255,170,.14);color:#7dffb0;white-space:nowrap}
+.olp.w{background:rgba(255,200,80,.15);color:#ffd166}
+.oll{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.6;margin:12px 2px 6px}
+.olin{width:100%;box-sizing:border-box;padding:13px 15px;border-radius:14px;border:1.5px solid rgba(255,255,255,.16);background:rgba(0,0,0,.28);color:#fff;font:600 16px Outfit,sans-serif;outline:none}
+.olin:focus{border-color:#ffb300}
+.olt{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px;background:rgba(0,0,0,.3);margin:14px 0 4px}
+.olt button{padding:10px;border:0;border-radius:12px;background:transparent;color:rgba(255,255,255,.65);font:700 14px Outfit,sans-serif;cursor:pointer}
+.olt button.on{background:linear-gradient(135deg,#ff4d4d,#ff8a3d);color:#fff;box-shadow:0 4px 12px rgba(255,77,77,.35)}
+.olb{display:block;width:100%;margin-top:14px;padding:14px;border:0;border-radius:16px;background:linear-gradient(135deg,#ff4d4d,#ff8a3d);color:#fff;font:400 19px/1 "Lilita One",Outfit,sans-serif;letter-spacing:.03em;cursor:pointer;box-shadow:0 8px 20px rgba(255,77,77,.35)}
+.olb.g{background:linear-gradient(135deg,#2fbf71,#1c9d6b);box-shadow:0 8px 20px rgba(47,191,113,.3)}
+.olb.s{background:rgba(255,255,255,.1);box-shadow:none;font:700 14px Outfit,sans-serif;padding:11px;margin-top:8px}
+.olb:disabled{opacity:.4;cursor:not-allowed}
+.olcd{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:2px 0}
+.olcd span{aspect-ratio:1/1.15;border-radius:14px;display:grid;place-items:center;background:rgba(0,0,0,.3);border:1.5px solid rgba(255,255,255,.16);font:400 26px/1 "Lilita One",Outfit,sans-serif}
+.olcd span.f{border-color:#ffb300;color:#ffd166}
+.olcd input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;text-transform:uppercase}
+.olbig{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:4px 0 8px}
+.olbig span{aspect-ratio:1/1.15;border-radius:14px;display:grid;place-items:center;background:linear-gradient(160deg,#ffb300,#ff8a3d);color:#2a1200;font:400 30px/1 "Lilita One",Outfit,sans-serif;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.olr{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.olpl{display:flex;align-items:center;gap:11px;padding:9px 11px;margin-top:6px;border-radius:14px;background:rgba(255,255,255,.07)}
+.olpl i{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 15px Outfit,sans-serif;font-style:normal;flex:none}
+.olpl b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.olpl em{margin-left:auto;font-style:normal;font-size:11px;font-weight:700;opacity:.65}
+.olpl.e{border:1.5px dashed rgba(255,255,255,.18);background:transparent;opacity:.5;font-size:13px}
+.olm{margin:12px 2px 0;font-size:13px;line-height:1.4;opacity:.8}.olm.er{color:#ff8a8a;opacity:1}
+.olw{font-size:12px;opacity:.7;margin:8px 2px 0;line-height:1.4}
+`;document.head.appendChild(st)}
+function olCodeBoxes(v,cls){let r="";for(let i=0;i<5;i++)r+='<span'+(cls?"":(v[i]?' class="f"':""))+'>'+(v[i]?esc(v[i]):"")+"</span>";return r}
+function onlDraw(){if(!B.onl)return;olCss();
+ const h=OL.role==="host",busy=!!OL.busy;let s='<div class="olc"><div class="olh"><i>U</i><div><h3>Main online</h3><small>'+(OL.role?(h?"Kamu host":"Tersambung"):"Lewat internet, beda perangkat")+'</small></div>'
+  +(OL.role?'<span class="olp">● Online</span>':OL.st?'<span class="olp w">'+esc(OL.st)+'</span>':"")+'</div>';
+ if(!OL.role){const tab=OL.tab||"host";
+  s+='<div class="oll" style="margin-top:0">Namamu</div><input class="olin" id="uonm" maxlength="12" autocomplete="off" placeholder="Nama" value="'+esc(OL.name)+'">'
+   +'<div class="olt"><button type="button" data-tab="host" class="'+(tab==="host"?"on":"")+'">Buat room</button><button type="button" data-tab="join" class="'+(tab==="join"?"on":"")+'">Gabung</button></div>';
+  if(tab==="host")s+='<p class="olm">Kamu jadi host, lalu bagikan kode 5 huruf ke teman.</p><button type="button" class="olb" id="uohost"'+(busy?" disabled":"")+'>'+(busy?"Menghubungkan…":"Buat room")+'</button><p class="olw">Tips: tetap buka halaman ini selama main (jangan pindah app) supaya teman bisa masuk.</p>';
+  else{const v=(OL.code||"").slice(0,5);
+   s+='<div class="oll">Kode room</div><div class="olcd" id="uobx">'+olCodeBoxes(v)+'<input id="uocd" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Kode room" value="'+esc(v)+'"></div><button type="button" class="olb" id="uojoin"'+(busy?" disabled":"")+'>'+(busy?"Menghubungkan…":"Gabung")+'</button>'}}
  else{
-  s+=(h?'<div class="lb">Kode room · bagikan ke teman</div><button type="button" id="uocp" style="display:block;width:100%;margin:6px 0 12px;padding:14px;border-radius:18px;border:1.5px dashed var(--bd);background:transparent;color:var(--tx);font:400 34px/1 Lilita One,Outfit,sans-serif;letter-spacing:.22em">'+OL.code+'</button>':'<p class="brp">Terhubung ke room. Menunggu host memulai…</p>')
-   +'<div class="lb">Pemain ('+OL.names.length+'/5)</div>'
-   +OL.names.map((n,i)=>'<div style="display:flex;align-items:center;gap:10px;padding:7px 0"><i style="width:30px;height:30px;border-radius:50%;background:'+AV[i%AV.length]+';color:#fff;display:grid;place-items:center;font:700 14px Outfit,sans-serif;font-style:normal">'+esc((n||"?")[0])+'</i><b>'+esc(n)+'</b><span style="opacity:.55;font-size:12px">'+(i===(h?0:OL.seat)?"(kamu)":i===0?"host":"")+'</span></div>').join("")
-   +(h?'<button type="button" class="chip on brgo" id="uogo"'+(OL.names.length<2?" disabled":"")+' style="margin-top:10px">Mulai main</button>':"")
-   +'<button type="button" class="chip" id="uobk" style="margin-top:8px">Keluar room</button>'}
- s+=(OL.err?'<p class="brp" style="color:var(--no)">'+esc(OL.err)+"</p>":"")+(OL.st?'<p class="brp">'+esc(OL.st)+"</p>":"")+"</div>";
+  if(h)s+='<div class="oll" style="margin-top:0">Kode room · bagikan ke teman</div><div class="olbig">'+olCodeBoxes((OL.code||"").split(""),1)+'</div><div class="olr"><button type="button" class="olb s" id="uocp">Salin kode</button><button type="button" class="olb s" id="uosh">Bagikan</button></div>';
+  else s+='<p class="olm" style="margin-top:0">Terhubung ke room <b>'+esc(OL.code)+'</b>. Menunggu host memulai…</p>';
+  s+='<div class="oll">Pemain ('+OL.names.length+'/5)</div>'
+   +OL.names.map((n,i)=>'<div class="olpl"><i style="background:'+AV[i%AV.length]+'">'+esc((n||"?")[0])+'</i><b>'+esc(n)+'</b><em>'+(i===(h?0:OL.seat)?"KAMU":i===0?"HOST":"")+'</em></div>').join("")
+   +(OL.names.length<5?'<div class="olpl e">Menunggu pemain lain…</div>':"")
+   +(h?'<button type="button" class="olb g" id="uogo"'+(OL.names.length<2?" disabled":"")+'>Mulai main</button>':"")
+   +'<button type="button" class="olb s" id="uobk">Keluar room</button>'}
+ s+=(OL.err?'<p class="olm er">'+esc(OL.err)+"</p>":"")+(OL.st&&OL.role?'<p class="olm">'+esc(OL.st)+"</p>":"")+"</div>";
  el.innerHTML=s}
 function cfgOnline(){clearTimeout(tm);netLeave();B={ph:"setup",gen:false,onl:1};OL.err="";onlDraw()}
 function onlClick(e){const g=s=>e.target.closest(s),nm0=()=>{const i=el.querySelector("#uonm");OL.name=((i&&i.value)||OL.name).trim().slice(0,12)||"Pemain";S.on=OL.name;save()};
- if(g("#uohost")){nm0();ohost()}
+ if(g("[data-tab]")){nm0();OL.tab=g("[data-tab]").dataset.tab;OL.err="";onlDraw()}
+ else if(g("#uohost")){nm0();ohost()}
  else if(g("#uojoin")){nm0();const i=el.querySelector("#uocd");OL.code=i?i.value:OL.code;ojoin()}
  else if(g("#uogo")){ostart()}
  else if(g("#uocp")){try{navigator.clipboard.writeText(OL.code);toast("Kode disalin",1200)}catch(x){}}
+ else if(g("#uosh")){const t="Ayo main UNO bareng! Kode room: "+OL.code;try{if(navigator.share)navigator.share({text:t}).catch(()=>{});else{navigator.clipboard.writeText(t);toast("Teks undangan disalin",1400)}}catch(x){}}
  else if(g("#uobk")){netLeave();OL.err="";onlDraw()}}
-el.addEventListener("input",e=>{if(!B.onl)return;const t=e.target;if(t.id==="uonm")OL.name=t.value;else if(t.id==="uocd")OL.code=t.value.toUpperCase()});
+el.addEventListener("input",e=>{if(!B.onl)return;const t=e.target;if(t.id==="uonm")OL.name=t.value;else if(t.id==="uocd"){t.value=t.value.replace(/[^A-Za-z0-9]/g,"").toUpperCase().slice(0,5);OL.code=t.value;const bx=el.querySelector("#uobx");if(bx)[...bx.querySelectorAll("span")].forEach((sp,i)=>{sp.textContent=t.value[i]||"";sp.className=t.value[i]?"f":""})}});
 // --- host ---
 async function ohost(){if(OL.busy)return;OL.busy=1;OL.err="";OL.st="Menghubungkan…";onlDraw();
  try{await loadPeer()}catch(e){OL.busy=0;OL.st="";OL.err="PeerJS gagal dimuat. Kalau kamu buka lewat preview di aplikasi Claude, koneksi internet diblokir: buka file ini di Chrome.";onlDraw();return}
  const mk=n=>{const code=Array.from({length:5},()=>CHR[zR(CHR.length)]).join(""),p=new Peer("zcuno-"+code.toLowerCase(),PCFG);
   const to=setTimeout(()=>{if(OL.role==="host")return;try{p.destroy()}catch(e){}OL.busy=0;OL.st="";OL.err="Server PeerJS tidak merespons. Coba buka file ini di browser (Chrome) atau cek koneksi.";onlDraw()},10000);
   p.on("open",()=>{clearTimeout(to);OL.busy=0;OL.role="host";OL.peer=p;OL.code=code;OL.names=[OL.name];OL.conns=[null];OL.toks=[""];OL.seen=[0];OL.st="";hbStart();onlDraw()});
-  p.on("connection",hconn);p.on("disconnected",()=>{try{p.reconnect()}catch(e){}});
+  hwire(p);
   p.on("error",er=>{if(er.type==="unavailable-id"&&n<4){try{p.destroy()}catch(e){}mk(n+1);return}if(OL.role==="host")return;OL.busy=0;OL.st="";OL.err="Gagal: "+(er.type||"koneksi");onlDraw()})};
  mk(0)}
+// host tetap "terdaftar" di server PeerJS walau tab/app sempat di-background (penyebab utama Android gagal jadi host)
+let WL=null;
+async function wlock(){try{if(OL.role==="host"&&navigator.wakeLock&&document.visibilityState==="visible"&&!WL){WL=await navigator.wakeLock.request("screen");WL.addEventListener("release",()=>{WL=null})}}catch(e){WL=null}}
+function hwire(p){p.on("connection",hconn);
+ p.on("disconnected",()=>{if(OL.role==="host"&&OL.peer===p)setTimeout(hkeep,600)});
+ p.on("close",()=>{if(OL.role==="host"&&OL.peer===p)setTimeout(hkeep,1500)});
+ p.on("error",er=>{if(OL.role==="host"&&OL.peer===p&&er.type!=="peer-unavailable")setTimeout(hkeep,er.type==="unavailable-id"?3000:1500)})}
+function hkeep(){if(OL.role!=="host"||!OL.peer)return;const p=OL.peer;
+ if(p.destroyed){const np=new Peer("zcuno-"+OL.code.toLowerCase(),PCFG);OL.peer=np;hwire(np);return}
+ if(p.disconnected){try{p.reconnect()}catch(e){}}}
+["visibilitychange","focus","online","pageshow"].forEach(ev=>(ev==="visibilitychange"?document:window).addEventListener(ev,()=>{if(OL.role==="host"){hkeep();wlock()}}));
 function hconn(c){
  c.on("data",m=>{if(!m||typeof m!=="object")return;
   if(m.t==="hello"){
@@ -4020,7 +4073,7 @@ function toBot(k,txt){if(B.bots.has(k))return;B.lost.delete(k);B.bots.add(k);toa
 function revive(k){if(B.mode!=="net"||!B.host||!B.lost)return;const was=B.lost.has(k)||B.bots.has(k);B.lost.delete(k);B.bots.delete(k);OL.seen[k]=Date.now();
  if(was){toast(B.names[k]+" kembali",1500);B.msg=B.names[k]+" kembali ke permainan";render()}
  if(!B.dealing)sendTo(k,snap(k,null))}
-function hbStart(){clearInterval(OL.hbt);OL.hbt=setInterval(()=>{if(OL.role!=="host")return;sendAll({t:"hb"});
+function hbStart(){clearInterval(OL.hbt);wlock();OL.hbt=setInterval(()=>{if(OL.role!=="host")return;hkeep();sendAll({t:"hb"});
  if(B.mode==="net"&&B.host&&B.ph==="play"&&!B.over){const now=Date.now();for(let k=1;k<B.n;k++)if(OL.conns[k]&&!B.lost.has(k)&&!B.bots.has(k)&&now-(OL.seen[k]||now)>20000)lose(k)}},3000)}
 function ostart(){if(OL.role!=="host")return;
  for(let k=OL.conns.length-1;k>=1;k--){const c=OL.conns[k];if(!c||!c.open){OL.conns.splice(k,1);OL.names.splice(k,1);OL.toks.splice(k,1);OL.seen.splice(k,1)}}
@@ -4048,10 +4101,10 @@ async function ojoin(){const code=OL.code.replace(/[^A-Za-z0-9]/g,"").toUpperCas
  const fail=t=>{if(done)return;done=1;clearTimeout(to);try{p.destroy()}catch(e){}OL.peer=null;OL.hc=null;OL.busy=0;OL.st="";OL.err=t;onlDraw()};
  const att=()=>{if(done)return;tries++;OL.st="Menghubungkan… ("+tries+")";onlDraw();
   const c=p.connect("zcuno-"+code.toLowerCase(),{reliable:true,serialization:"json"});OL.hc=c;let ok=0;
-  to=setTimeout(()=>{if(ok||done)return;try{c.close()}catch(e){}if(tries<3)att();else fail("Tidak bisa terhubung ke room. Coba lagi / ganti jaringan.")},9000);
+  to=setTimeout(()=>{if(ok||done)return;try{c.close()}catch(e){}if(tries<6)att();else fail("Tidak bisa terhubung ke room. Pastikan host masih membuka halaman game (jangan pindah app), lalu coba lagi.")},9000);
   c.on("open",()=>{if(done)return;ok=1;clearTimeout(to);done=1;OL.busy=0;OL.role="client";OL.st="";OL.names=[];cwire(c);c.send({t:"hello",name:OL.name,tok:ctok()});onlDraw()});
   c.on("error",()=>{})};
- p.on("error",er=>{if(er.type==="peer-unavailable"){if(tries<3){clearTimeout(to);setTimeout(att,1200)}else fail("Room tidak ditemukan. Pastikan host masih membuka lobby.")}else fail("Gagal: "+(er.type||"koneksi"))});
+ p.on("error",er=>{if(er.type==="peer-unavailable"){if(tries<8){clearTimeout(to);setTimeout(att,2000)}else fail("Room tidak ditemukan. Pastikan kode benar dan host masih membuka lobby di layar.")}else fail("Gagal: "+(er.type||"koneksi"))});
  p.on("open",att)}
 function ctok(){if(!OL.tok){OL.tok=S.tk||(Math.random().toString(36).slice(2,10)+Date.now().toString(36));if(S.tk!==OL.tok){S.tk=OL.tok;save()}}return OL.tok}
 function cwire(c){OL.hc=c;OL.hbAt=Date.now();c.on("data",m=>{OL.hbAt=Date.now();cdata(m)});c.on("close",()=>{if(OL.hc===c&&OL.role==="client")cdrop()});c.on("error",()=>{});
